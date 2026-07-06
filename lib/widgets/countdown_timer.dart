@@ -62,10 +62,7 @@ class _CountdownTimerState extends State<CountdownTimer> {
         if (seconds <= 0) {
           timer?.cancel();
 
-          await GameService().startVoting(
-            roomId: widget.roomId,
-            round: widget.round,
-          );
+          await GameService().startVoting(widget.roomId, widget.round);
         }
       });
     });
