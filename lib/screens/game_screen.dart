@@ -38,18 +38,23 @@ class _GameScreenState extends State<GameScreen> {
       builder: (context, roomSnapshot) {
         if (!roomSnapshot.hasData) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        final room =
-            roomSnapshot.data!.data() as Map<String, dynamic>;
+        final roomDoc = roomSnapshot.data!;
 
-        final currentRound = room["currentRound"];
+        // 🔥 IMPORTANT : sécurité null + cast safe
+        final room = roomDoc.data() as Map<String, dynamic>?;
 
-        final hostId = room["hostId"];
+        if (room == null) {
+          return const Scaffold(
+            body: Center(child: Text("Room introuvable")),
+          );
+        }
+
+        final int currentRound = room["currentRound"] ?? 0;
+        final String hostId = room["hostId"] ?? "";
 
         final roundRef = roomRef
             .collection("rounds")
@@ -60,19 +65,31 @@ class _GameScreenState extends State<GameScreen> {
           builder: (context, roundSnapshot) {
             if (!roundSnapshot.hasData) {
               return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final roundDoc = roundSnapshot.data!;
+
+            // 🔥 FIX PRINCIPAL ICI
+            final roundData =
+                roundDoc.data() as Map<String, dynamic>?;
+
+            // 👉 si round pas encore créé
+            if (roundData == null) {
+              return const Scaffold(
                 body: Center(
-                  child: CircularProgressIndicator(),
+                  child: Text("En attente du lancement du round..."),
                 ),
               );
             }
 
-            final round =
-                roundSnapshot.data!.data() as Map<String, dynamic>;
+            final String status = roundData["status"] ?? "theme";
+            final String theme = roundData["theme"] ?? "";
 
-            final String status = round["status"];
-
-            final String theme = round["theme"];
-
+            // ===============================
+            // NAVIGATION VOTE
+            // ===============================
             if (status == "vote") {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 Navigator.pushReplacement(
@@ -99,20 +116,17 @@ class _GameScreenState extends State<GameScreen> {
                     builder: (_) {
 
                       // ===============================
-                      // CHOIX DU THEME
+                      // THEME PHASE
                       // ===============================
                       if (status == "theme") {
-
                         if (widget.userId == hostId) {
                           return Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-
                               const Text(
                                 "Choisissez le thème",
                                 style: TextStyle(fontSize: 24),
                               ),
-
                               const SizedBox(height: 20),
 
                               TextField(
@@ -127,15 +141,15 @@ class _GameScreenState extends State<GameScreen> {
 
                               ElevatedButton(
                                 onPressed: () async {
+                                  final value =
+                                      themeController.text.trim();
 
-                                  if (themeController.text.trim().isEmpty) {
-                                    return;
-                                  }
+                                  if (value.isEmpty) return;
 
                                   await GameService().startPhotoPhase(
                                     roomId: widget.roomId,
                                     round: currentRound,
-                                    theme: themeController.text.trim(),
+                                    theme: value,
                                   );
                                 },
                                 child: const Text("Valider"),
@@ -145,20 +159,18 @@ class _GameScreenState extends State<GameScreen> {
                         }
 
                         return const Text(
-                          "Le maître du jeu choisit un thème...",
+                          "Le host choisit un thème...",
                           style: TextStyle(fontSize: 22),
                         );
                       }
 
                       // ===============================
-                      // PHASE PHOTO
+                      // PHOTO PHASE
                       // ===============================
                       if (status == "photo") {
-
                         return Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-
                             const Text(
                               "Thème",
                               style: TextStyle(fontSize: 22),
