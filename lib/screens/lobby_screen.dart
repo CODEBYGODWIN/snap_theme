@@ -5,11 +5,7 @@ class LobbyScreen extends StatelessWidget {
   final String roomId;
   final String userId;
 
-  const LobbyScreen({
-    super.key,
-    required this.roomId,
-    required this.userId,
-  });
+  const LobbyScreen({super.key, required this.roomId, required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +15,6 @@ class LobbyScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Lobby")),
       body: Column(
         children: [
-
-          // 👥 PLAYERS LIVE
           StreamBuilder(
             stream: roomRef.collection("players").snapshots(),
             builder: (context, snapshot) {
@@ -55,15 +49,12 @@ class LobbyScreen extends StatelessWidget {
 
                   final players = snap.data!.docs;
 
-                  final canStart =
-                      hostId == userId && players.length >= 3;
+                  final canStart = hostId == userId && players.length >= 3;
 
                   return ElevatedButton(
                     onPressed: canStart
                         ? () async {
-                            await roomRef.update({
-                              "status": "playing",
-                            });
+                            await roomRef.update({"status": "playing"});
                           }
                         : null,
                     child: const Text("Démarrer la partie"),
