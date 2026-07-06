@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../services/submission_service.dart';
 import '../widgets/countdown_timer.dart';
 import 'capture_screen.dart';
 
@@ -18,10 +19,16 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  final SubmissionService _submissionService = SubmissionService();
+
   XFile? _photo;
   bool _isSpectator = false;
 
-  Future<void> _capturePhoto() async {
+  bool _uploading = false;
+  bool _submitted = false;
+  String? _uploadError;
+
+  Future<void> _capturePhoto(int round) async {
     final userId = FirebaseAuth.instance.currentUser!.uid;
     final result = await Navigator.of(context).push<CaptureResult>(
       MaterialPageRoute(
@@ -32,7 +39,43 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _photo = result.photo;
       _isSpectator = result.becameSpectator;
+      _submitted = false;
+      _uploadError = null;
     });
+    if (result.photo != null) await _uploadPhoto(round);
+  }
+
+  Future<void> _uploadPhoto(int round) async {
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+    setState(() {
+      _uploading = true;
+      _uploadError = null;
+    });
+    try {
+      await _submissionService.submitPhoto(
+        roomId: widget.roomId,
+        round: round,
+        userId: userId,
+        photo: _photo!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _uploading = false;
+        _submitted = true;
+      });
+    } on SubmissionClosedException {
+      if (!mounted) return;
+      setState(() {
+        _uploading = false;
+        _uploadError = "Temps écoulé : la soumission est fermée.";
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _uploading = false;
+        _uploadError = "Échec de l'envoi. Vérifie ta connexion.";
+      });
+    }
   }
 
   @override
@@ -114,15 +157,43 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text("Photo prête ! (upload en Partie 6)"),
-                      if (canShoot)
-                        TextButton(
-                          onPressed: _capturePhoto,
-                          child: const Text("Changer de photo"),
+
+                      if (_uploading)
+                        const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text("Envoi en cours…"),
+                          ],
+                        )
+                      else if (_submitted) ...[
+                        const Text("✅ Photo envoyée !"),
+                        if (canShoot)
+                          TextButton(
+                            onPressed: () => _capturePhoto(currentRound),
+                            child: const Text("Changer de photo"),
+                          ),
+                      ] else if (_uploadError != null) ...[
+                        Text(
+                          _uploadError!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
                         ),
+                        if (canShoot)
+                          FilledButton.icon(
+                            onPressed: () => _uploadPhoto(currentRound),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text("Réessayer l'envoi"),
+                          ),
+                      ],
                     ] else if (canShoot)
                       FilledButton.icon(
-                        onPressed: _capturePhoto,
+                        onPressed: () => _capturePhoto(currentRound),
                         icon: const Icon(Icons.photo_camera),
                         label: const Text("Prendre ma photo"),
                       ),
