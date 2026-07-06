@@ -84,11 +84,7 @@ class RoomService {
       await p.reference.update({"score": 0});
     }
 
-    await roomRef.update({
-      "status": "playing",
-      "currentRound": 1,
-      "gameStarted": true,
-    });
+    await roomRef.update({"gameStarted": true});
   }
 
   Future<void> resetToLobby(String roomId) async {

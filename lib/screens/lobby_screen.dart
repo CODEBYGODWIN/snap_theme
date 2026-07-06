@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:snap_theme/services/game_service.dart';
 import 'package:snap_theme/services/room_service.dart';
 import 'game_screen.dart';
 
@@ -46,7 +47,7 @@ class LobbyScreen extends StatelessWidget {
           final status = roomData["status"];
 
           // 🚀 Dès que la partie démarre, tout le monde bascule sur GameScreen
-          if (status == "playing") {
+          if (status != "waiting") {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               Navigator.pushReplacement(
                 context,
@@ -134,6 +135,7 @@ class LobbyScreen extends StatelessWidget {
                       onPressed: canStart
                           ? () async {
                               await roomService.startGame(roomId);
+                              await GameService().startNextRound(roomId);
                             }
                           : null,
                       child: const Text("Démarrer la partie"),

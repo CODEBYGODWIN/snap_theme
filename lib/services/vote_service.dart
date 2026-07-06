@@ -19,6 +19,7 @@ class VoteService {
         .doc(voteId);
 
     await voteRef.set({
+      "round": roundId,
       "votedForPlayerId": votedForId,
     });
   }
