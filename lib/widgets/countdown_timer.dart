@@ -17,7 +17,8 @@ class CountdownTimer extends StatefulWidget {
 
 class _CountdownTimerState extends State<CountdownTimer> {
   Timer? timer;
-  int seconds = 10; 
+  int? seconds;
+
   @override
   void initState() {
     super.initState();
@@ -29,31 +30,32 @@ class _CountdownTimerState extends State<CountdownTimer> {
     FirebaseFirestore.instance.collection("rooms").doc(widget.roomId).collection("rounds").doc(widget.round.toString()).snapshots().listen((event){
       final Timestamp end = event["endsAt"];
       timer?.cancel();
+      _tick(end);
       timer = Timer.periodic(
         const Duration(seconds:1),
-            (timer) async{
-          final remaining = end
-              .toDate()
-              .difference(DateTime.now())
-              .inSeconds;
-          if(!mounted)return;
-          setState(() {
-            seconds = remaining.clamp(0,60);
-          });
-          if(seconds==0){
-            timer.cancel();
-            await GameService().startVoting(
-              widget.roomId,
-              widget.round,
-            );
-          }
-
-        },
-
+            (timer) => _tick(end),
       );
 
     });
 
+  }
+
+  void _tick(Timestamp end) async {
+    final remaining = end
+        .toDate()
+        .difference(DateTime.now())
+        .inSeconds;
+    if(!mounted)return;
+    setState(() {
+      seconds = remaining.clamp(0,60);
+    });
+    if(seconds==0){
+      timer?.cancel();
+      await GameService().startVoting(
+        widget.roomId,
+        widget.round,
+      );
+    }
   }
 
   @override
@@ -64,6 +66,14 @@ class _CountdownTimerState extends State<CountdownTimer> {
 
   @override
   Widget build(BuildContext context) {
+    if (seconds == null) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
     return Text(
       "$seconds",
       style: const TextStyle(
