@@ -3,14 +3,18 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../services/game_service.dart';
-
 class CountdownTimer extends StatefulWidget {
 
   final String roomId;
   final int round;
+  final Future<void> Function() onExpired;
 
-  const CountdownTimer({super.key,required this.roomId,required this.round,});
+  const CountdownTimer({
+    super.key,
+    required this.roomId,
+    required this.round,
+    required this.onExpired,
+  });
   @override
   State<CountdownTimer> createState() => _CountdownTimerState();
 }
@@ -51,10 +55,7 @@ class _CountdownTimerState extends State<CountdownTimer> {
     });
     if(seconds==0){
       timer?.cancel();
-      await GameService().startVoting(
-        widget.roomId,
-        widget.round,
-      );
+      await widget.onExpired();
     }
   }
 

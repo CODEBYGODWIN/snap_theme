@@ -92,12 +92,69 @@ class LeaderboardScreen extends StatelessWidget {
                       if (winnerId != null)
                         Padding(
                           padding: const EdgeInsets.all(16),
+                          child: StreamBuilder<DocumentSnapshot>(
+                            stream: roundRef
+                                .collection("submissions")
+                                .doc(winnerId)
+                                .snapshots(),
+                            builder: (context, submissionSnapshot) {
+                              final photoUrl = submissionSnapshot.data
+                                  ?.get("photoUrl") as String?;
+
+                              return Column(
+                                children: [
+                                  if (photoUrl != null)
+                                    Stack(
+                                      alignment: Alignment.topRight,
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: Image.network(
+                                            photoUrl,
+                                            height: 160,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        Container(
+                                          margin: const EdgeInsets.all(8),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Text(
+                                            "🏆 Winner",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "🎉 ${_nameOf(players, winnerId)} remporte la manche !",
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        )
+                      else if (status != "waiting")
+                        const Padding(
+                          padding: EdgeInsets.all(16),
                           child: Text(
-                            "🎉 ${_nameOf(players, winnerId)} remporte la manche !",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            "Pas de gagnant unique ce tour (égalité ou aucun vote) — chacun marque les points des votes reçus.",
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       Expanded(

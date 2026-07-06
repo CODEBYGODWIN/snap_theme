@@ -51,13 +51,20 @@ class GameService {
 
   Future<void> startVoting(String roomId, int currentRound) async {
     final roomRef = _db.collection("rooms").doc(roomId);
+    final endsAt = Timestamp.fromDate(
+      DateTime.now().add(const Duration(seconds: 30)),
+    );
 
     await roomRef.update({"status": "vote"});
     await roomRef.collection("rounds").doc(currentRound.toString()).update({
       "status": "vote",
+      "endsAt": endsAt,
     });
   }
 
+  /// La bascule de statut se fait dans une transaction : si plusieurs
+  /// clients déclenchent la clôture en même temps (auto-clôture + bouton
+  /// hôte), un seul calcule le gagnant et incrémente le score.
   Future<void> endVoting(String roomId, int round) async {
     final roundRef = _db
         .collection("rooms")
@@ -65,15 +72,21 @@ class GameService {
         .collection("rounds")
         .doc(round.toString());
 
-    final roundSnap = await roundRef.get();
-    if (roundSnap["status"] != "vote") return;
+    final shouldProceed = await _db.runTransaction((tx) async {
+      final snap = await tx.get(roundRef);
+      if (snap.get("status") != "vote") return false;
+      tx.update(roundRef, {"status": "leaderboard"});
+      return true;
+    });
+
+    if (!shouldProceed) return;
 
     final winnerId = await ScoreService().calculateRoundWinner(
       roomId: roomId,
       roundId: round,
     );
 
-    await roundRef.update({"status": "leaderboard", "winnerId": winnerId});
+    await roundRef.update({"winnerId": winnerId});
     await _db.collection("rooms").doc(roomId).update({"status": "leaderboard"});
   }
 }
