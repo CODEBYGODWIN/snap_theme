@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ScoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  Future<void> calculateRoundWinner({
+  Future<String?> calculateRoundWinner({
     required String roomId,
     required int roundId,
   }) async {
@@ -12,6 +12,7 @@ class ScoreService {
         .collection("rooms")
         .doc(roomId)
         .collection("votes")
+        .where("round", isEqualTo: roundId)
         .get();
 
     final Map<String, int> count = {};
@@ -32,7 +33,7 @@ class ScoreService {
       }
     });
 
-    if (winner == null) return;
+    if (winner == null) return null;
 
     final playerRef = _db
         .collection("rooms")
@@ -43,5 +44,7 @@ class ScoreService {
     await playerRef.update({
       "score": FieldValue.increment(1),
     });
+
+    return winner;
   }
 }
