@@ -5,7 +5,12 @@ class RoomService {
   final _db = FirebaseFirestore.instance;
 
   String generateCode() {
+  String generateCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return List.generate(
+      6,
+      (index) => chars[Random().nextInt(chars.length)],
+    ).join();
     return List.generate(
       6,
       (index) => chars[Random().nextInt(chars.length)],
@@ -27,9 +32,20 @@ class RoomService {
       "maxPlayers": 6,
       "currentRound": 0,
       "maxRound": 12,
+      "code": code,
+      "hostId": hostId,
+      "status": "waiting",
+      "maxPlayers": 6,
+      "currentRound": 0,
+      "maxRound": 12,
     });
 
     await roomRef.collection("players").doc(hostId).set({
+      "displayName": displayName,
+      "joinedAt": FieldValue.serverTimestamp(),
+      "canCapture": false,
+      "isSpectator": false,
+      "score": 0,
       "displayName": displayName,
       "joinedAt": FieldValue.serverTimestamp(),
       "canCapture": false,
@@ -64,6 +80,18 @@ class RoomService {
     });
 
     return (roomId: room.id, code: room.data()["code"] as String);
+  }
+
+  Future<void> setSpectator(String roomId, String userId) async {
+    await _db
+        .collection("rooms")
+        .doc(roomId)
+        .collection("players")
+        .doc(userId)
+        .set({
+          "isSpectator": true,
+          "canCapture": false,
+        }, SetOptions(merge: true));
   }
 
   Future<void> leaveRoom(String roomId, String userId) async {
