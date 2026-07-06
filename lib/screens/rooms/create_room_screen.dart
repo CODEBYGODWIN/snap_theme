@@ -14,6 +14,9 @@ class CreateRoomScreen extends StatefulWidget {
 class _CreateRoomScreenState extends State<CreateRoomScreen> {
   final RoomService _roomService = RoomService();
 
+  int maxPlayers = 4;
+  int maxRounds = 5;
+
   bool isLoading = false;
   String error = "";
 
@@ -25,18 +28,16 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-
-      if (user == null) {
-        setState(() {
-          error = "Utilisateur non connecté";
-          isLoading = false;
-        });
-        return;
-      }
+      if (user == null) return;
 
       final displayName = user.displayName ?? "Player";
 
-      final result = await _roomService.createRoom(user.uid, displayName);
+      final result = await _roomService.createRoom(
+        user.uid,
+        displayName,
+        maxPlayers,
+        maxRounds,
+      );
 
       if (!mounted) return;
 
@@ -62,32 +63,45 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Créer une room")),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                "Créer une nouvelle partie",
-                style: TextStyle(fontSize: 18),
-              ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("Configuration de la partie"),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-              if (error.isNotEmpty)
-                Text(error, style: const TextStyle(color: Colors.red)),
+            Text("Joueurs max: $maxPlayers"),
+            Slider(
+              value: maxPlayers.toDouble(),
+              min: 2,
+              max: 8,
+              divisions: 6,
+              onChanged: (v) => setState(() => maxPlayers = v.toInt()),
+            ),
 
-              const SizedBox(height: 20),
+            Text("Rounds: $maxRounds"),
+            Slider(
+              value: maxRounds.toDouble(),
+              min: 1,
+              max: 10,
+              divisions: 9,
+              onChanged: (v) => setState(() => maxRounds = v.toInt()),
+            ),
 
-              isLoading
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: createRoom,
-                      child: const Text("Créer la room"),
-                    ),
-            ],
-          ),
+            const SizedBox(height: 20),
+
+            if (error.isNotEmpty)
+              Text(error, style: const TextStyle(color: Colors.red)),
+
+            isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: createRoom,
+                    child: const Text("Créer"),
+                  ),
+          ],
         ),
       ),
     );
