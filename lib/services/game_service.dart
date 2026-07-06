@@ -6,30 +6,43 @@ class GameService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Future<void> startNextRound(String roomId) async {
-    final roomRef = _db.collection("rooms").doc(roomId);
-    final room = await roomRef.get();
+  final roomRef = _db.collection("rooms").doc(roomId);
+  final room = await roomRef.get();
 
-    final currentRound = room["currentRound"] as int;
-    final maxRound = room["maxRound"] as int;
-    final nextRound = currentRound + 1;
+  final currentRound = room["currentRound"] as int;
+  final maxRound = room["maxRound"] as int;
+  final nextRound = currentRound + 1;
 
-    if (nextRound > maxRound) {
-      await roomRef.update({"status": "finished"});
-      return;
-    }
-
-    final hostId = room["hostId"] as String;
-
-    await roomRef.collection("rounds").doc(nextRound.toString()).set({
-      "theme": "",
-      "status": "theme",
-      "chooserId": hostId,
-      "endsAt": Timestamp.now(),
-    });
-
-    await roomRef.update({"status": "theme", "currentRound": nextRound});
+  if (nextRound > maxRound) {
+    await roomRef.update({"status": "finished"});
+    return;
   }
 
+  String chooserId;
+
+  if (currentRound == 0) {
+    // Premier round : c'est l'hôte qui choisit
+    chooserId = room["hostId"] as String;
+  } else {
+    // Rounds suivants : le gagnant du round précédent
+    final previousRoundRef =
+        roomRef.collection("rounds").doc(currentRound.toString());
+    final previousRoundSnap = await previousRoundRef.get();
+    final winnerId = previousRoundSnap.data()?["winnerId"] as String?;
+
+    // Sécurité : si jamais winnerId est absent, on retombe sur l'hôte
+    chooserId = winnerId ?? room["hostId"] as String;
+  }
+
+  await roomRef.collection("rounds").doc(nextRound.toString()).set({
+    "theme": "",
+    "status": "theme",
+    "chooserId": chooserId,
+    "endsAt": Timestamp.now(),
+  });
+
+  await roomRef.update({"status": "theme", "currentRound": nextRound});
+}
   Future<void> chooseTheme({
     required String roomId,
     required int round,
