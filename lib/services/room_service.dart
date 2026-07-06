@@ -78,13 +78,31 @@ class RoomService {
 
   Future<void> startGame(String roomId) async {
     final roomRef = _db.collection("rooms").doc(roomId);
-    final players = await roomRef.collection("players").get();
 
+    await _clearPreviousRounds(roomRef);
+
+    final players = await roomRef.collection("players").get();
     for (final p in players.docs) {
       await p.reference.update({"score": 0});
     }
 
     await roomRef.update({"gameStarted": true});
+  }
+
+  Future<void> _clearPreviousRounds(DocumentReference roomRef) async {
+    final rounds = await roomRef.collection("rounds").get();
+    for (final round in rounds.docs) {
+      final submissions = await round.reference.collection("submissions").get();
+      for (final s in submissions.docs) {
+        await s.reference.delete();
+      }
+      await round.reference.delete();
+    }
+
+    final votes = await roomRef.collection("votes").get();
+    for (final v in votes.docs) {
+      await v.reference.delete();
+    }
   }
 
   Future<void> resetToLobby(String roomId) async {
