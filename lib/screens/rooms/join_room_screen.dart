@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../services/room_service.dart';
-import 'lobby_screen.dart';
+import '../../services/room_service.dart';
+import '../lobby_screen.dart';
 
 class JoinRoomScreen extends StatefulWidget {
   const JoinRoomScreen({super.key});
@@ -38,13 +38,13 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
 
       final displayName = user.displayName ?? "Player";
 
-      final roomId = await _roomService.joinRoom(
+      final result = await _roomService.joinRoom(
         codeController.text.trim().toUpperCase(),
         user.uid,
         displayName,
       );
 
-      if (roomId == null) {
+      if (result == null) {
         setState(() {
           error = "Room introuvable ou pleine";
           isLoading = false;
@@ -58,8 +58,9 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => LobbyScreen(
-            roomId: roomId,
+            roomId: result.roomId,
             userId: user.uid,
+            code: result.code,
           ),
         ),
       );
@@ -100,10 +101,7 @@ class _JoinRoomScreenState extends State<JoinRoomScreen> {
               const SizedBox(height: 20),
 
               if (error.isNotEmpty)
-                Text(
-                  error,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                Text(error, style: const TextStyle(color: Colors.red)),
 
               const SizedBox(height: 20),
 

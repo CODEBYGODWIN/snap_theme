@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth_providers.dart';
 import 'login_screen.dart';
+import '../rooms/create_room_screen.dart';
+import '../rooms/join_room_screen.dart';
 
 class Home extends ConsumerWidget {
   const Home({super.key});
@@ -17,9 +19,50 @@ class Home extends ConsumerWidget {
           return const LoginScreen();
         }
         return Scaffold(
-          appBar: AppBar(title: Text('Connecté : ${user.displayName}')),
-          body: const Center(
-            child: Text('lobby'),
+          appBar: AppBar(title: Text('Connecté : ${user.displayName ?? "Joueur"}')),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Bienvenue !',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 40),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CreateRoomScreen(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Text('Créer une room'),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const JoinRoomScreen(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Text('Rejoindre une room'),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },

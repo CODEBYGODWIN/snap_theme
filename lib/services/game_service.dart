@@ -11,7 +11,7 @@ class GameService {
     final currentRound = room["currentRound"] + 1;
 
     final endsAt = Timestamp.fromDate(
-      DateTime.now().add(const Duration(seconds: 60)),
+      DateTime.now().add(const Duration(seconds: 10)), //TODO: Change to 60 seconds
     );
 
     await roomRef.update({"status": "playing","theme": theme,"currentRound": currentRound,});

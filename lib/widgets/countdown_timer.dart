@@ -17,7 +17,7 @@ class CountdownTimer extends StatefulWidget {
 
 class _CountdownTimerState extends State<CountdownTimer> {
   Timer? timer;
-  int seconds = 60;
+  int seconds = 10; //TODO: Change to 60 seconds
   @override
   void initState() {
     super.initState();

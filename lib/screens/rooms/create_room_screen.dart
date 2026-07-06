@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../services/room_service.dart';
-import 'lobby_screen.dart';
+import '../../services/room_service.dart';
+import '../lobby_screen.dart';
 
 class CreateRoomScreen extends StatefulWidget {
   const CreateRoomScreen({super.key});
@@ -36,10 +36,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
 
       final displayName = user.displayName ?? "Player";
 
-      final roomId = await _roomService.createRoom(
-        user.uid,
-        displayName,
-      );
+      final result = await _roomService.createRoom(user.uid, displayName);
 
       if (!mounted) return;
 
@@ -47,8 +44,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => LobbyScreen(
-            roomId: roomId,
+            roomId: result.roomId,
             userId: user.uid,
+            code: result.code,
           ),
         ),
       );
@@ -78,10 +76,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
               const SizedBox(height: 20),
 
               if (error.isNotEmpty)
-                Text(
-                  error,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                Text(error, style: const TextStyle(color: Colors.red)),
 
               const SizedBox(height: 20),
 

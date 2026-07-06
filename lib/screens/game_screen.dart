@@ -2,13 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/countdown_timer.dart';
+import 'vote_screen.dart';
 
 class GameScreen extends StatelessWidget {
   final String roomId;
+  final String userId;
 
   const GameScreen({
     super.key,
     required this.roomId,
+    required this.userId,
   });
 
   @override
@@ -29,6 +32,23 @@ class GameScreen extends StatelessWidget {
             roomSnapshot.data!.data() as Map<String, dynamic>;
 
         final int currentRound = roomData["currentRound"];
+        final String status = roomData["status"];
+
+        // 🗳️ Dès que le vote démarre, tout le monde bascule sur VoteScreen
+        if (status == "voting") {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VoteScreen(
+                  roomId: roomId,
+                  roundId: currentRound,
+                  userId: userId,
+                ),
+              ),
+            );
+          });
+        }
 
         // 🔥 On écoute directement la manche actuelle
         final roundRef = roomRef
