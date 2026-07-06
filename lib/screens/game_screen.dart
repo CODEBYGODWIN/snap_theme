@@ -43,8 +43,6 @@ class _GameScreenState extends State<GameScreen> {
         }
 
         final roomDoc = roomSnapshot.data!;
-
-        // 🔥 IMPORTANT : sécurité null + cast safe
         final room = roomDoc.data() as Map<String, dynamic>?;
 
         if (room == null) {
@@ -53,7 +51,7 @@ class _GameScreenState extends State<GameScreen> {
           );
         }
 
-        final int currentRound = room["currentRound"] ?? 0;
+        final int currentRound = room["currentRound"] ?? 1;
         final String hostId = room["hostId"] ?? "";
 
         final roundRef = roomRef
@@ -70,16 +68,19 @@ class _GameScreenState extends State<GameScreen> {
             }
 
             final roundDoc = roundSnapshot.data!;
+            final roundData = roundDoc.data() as Map<String, dynamic>?;
 
-            // 🔥 FIX PRINCIPAL ICI
-            final roundData =
-                roundDoc.data() as Map<String, dynamic>?;
-
-            // 👉 si round pas encore créé
+            /// 🔥 IMPORTANT : auto création du round
+            /// => évite ton crash null + garantit flow propre
             if (roundData == null) {
+              GameService().createRound(
+                roomId: widget.roomId,
+                round: currentRound,
+              );
+
               return const Scaffold(
                 body: Center(
-                  child: Text("En attente du lancement du round..."),
+                  child: Text("Préparation du round..."),
                 ),
               );
             }
@@ -87,9 +88,9 @@ class _GameScreenState extends State<GameScreen> {
             final String status = roundData["status"] ?? "theme";
             final String theme = roundData["theme"] ?? "";
 
-            // ===============================
-            // NAVIGATION VOTE
-            // ===============================
+            /// =========================
+            /// NAVIGATION VOTE SAFE
+            /// =========================
             if (status == "vote") {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 Navigator.pushReplacement(
@@ -116,7 +117,7 @@ class _GameScreenState extends State<GameScreen> {
                     builder: (_) {
 
                       // ===============================
-                      // THEME PHASE
+                      // PHASE THEME
                       // ===============================
                       if (status == "theme") {
                         if (widget.userId == hostId) {
@@ -165,7 +166,7 @@ class _GameScreenState extends State<GameScreen> {
                       }
 
                       // ===============================
-                      // PHOTO PHASE
+                      // PHASE PHOTO
                       // ===============================
                       if (status == "photo") {
                         return Column(
@@ -197,7 +198,10 @@ class _GameScreenState extends State<GameScreen> {
                         );
                       }
 
-                      return const CircularProgressIndicator();
+                      // ===============================
+                      // FALLBACK
+                      // ===============================
+                      return const Text("Chargement...");
                     },
                   ),
                 ),
