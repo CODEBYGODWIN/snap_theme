@@ -63,8 +63,8 @@ class _CountdownTimerState extends State<CountdownTimer> {
           timer?.cancel();
 
           await GameService().startVoting(
-            widget.roomId,
-            widget.round,
+            roomId: widget.roomId,
+            round: widget.round,
           );
         }
       });
