@@ -20,10 +20,22 @@ class GameService {
 
     final hostId = room["hostId"] as String;
 
+    String chooserId;
+    if (currentRound == 0) {
+      chooserId = hostId;
+    } else {
+      final previousRoundRef = roomRef
+          .collection("rounds")
+          .doc(currentRound.toString());
+      final previousRoundSnap = await previousRoundRef.get();
+      final winnerId = previousRoundSnap.data()?["winnerId"] as String?;
+      chooserId = winnerId ?? hostId;
+    }
+
     await roomRef.collection("rounds").doc(nextRound.toString()).set({
       "theme": "",
       "status": "theme",
-      "chooserId": hostId,
+      "chooserId": chooserId,
       "endsAt": Timestamp.now(),
     });
 

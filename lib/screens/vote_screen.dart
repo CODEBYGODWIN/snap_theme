@@ -21,8 +21,7 @@ class VoteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roomRef = FirebaseFirestore.instance.collection("rooms").doc(roomId);
-    final roundRef =
-        roomRef.collection("rounds").doc(roundId.toString());
+    final roundRef = roomRef.collection("rounds").doc(roundId.toString());
     final submissionsRef = roundRef.collection("submissions");
     final votesRef = roomRef.collection("votes");
     final myVoteRef = votesRef.doc("${roundId}_$userId");
@@ -85,8 +84,8 @@ class VoteScreen extends StatelessWidget {
                         return GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                          ),
+                                crossAxisCount: 2,
+                              ),
                           itemCount: photos.length,
                           itemBuilder: (context, index) {
                             final photo = photos[index];
@@ -129,8 +128,8 @@ class VoteScreen extends StatelessWidget {
                                       isSelf
                                           ? "Toi"
                                           : isVoted
-                                              ? "✅ Ton vote"
-                                              : "Voter",
+                                          ? "✅ Ton vote"
+                                          : "Voter",
                                     ),
                                   ],
                                 ),
@@ -182,9 +181,6 @@ class VoteScreen extends StatelessWidget {
   }
 }
 
-/// Bouton de clôture du vote côté hôte : se désactive pendant l'appel pour
-/// éviter l'impression de bouton "bloqué", et se déclenche aussi tout seul
-/// (une fois) dès que tous les joueurs éligibles ont voté.
 class _CloseVoteButton extends StatefulWidget {
   final String roomId;
   final int roundId;
@@ -219,7 +215,6 @@ class _CloseVoteButtonState extends State<_CloseVoteButton> {
     if (_closing) return;
     setState(() => _closing = true);
     await GameService().endVoting(widget.roomId, widget.roundId);
-    // Pas de setState après coup : la navigation vers le leaderboard suit.
   }
 
   @override
