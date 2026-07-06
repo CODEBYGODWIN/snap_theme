@@ -6,54 +6,69 @@ import 'package:flutter/material.dart';
 import '../services/game_service.dart';
 
 class CountdownTimer extends StatefulWidget {
-
   final String roomId;
   final int round;
 
-  const CountdownTimer({super.key,required this.roomId,required this.round,});
+  const CountdownTimer({
+    super.key,
+    required this.roomId,
+    required this.round,
+  });
+
   @override
   State<CountdownTimer> createState() => _CountdownTimerState();
 }
 
 class _CountdownTimerState extends State<CountdownTimer> {
   Timer? timer;
-  int seconds = 10; 
+  int seconds = 0;
+
   @override
   void initState() {
     super.initState();
-    startListening();
+    _listenToEndsAt();
   }
 
-  void startListening(){
+  void _listenToEndsAt() {
+    final ref = FirebaseFirestore.instance
+        .collection("rooms")
+        .doc(widget.roomId)
+        .collection("rounds")
+        .doc(widget.round.toString());
 
-    FirebaseFirestore.instance.collection("rooms").doc(widget.roomId).collection("rounds").doc(widget.round.toString()).snapshots().listen((event){
-      final Timestamp end = event["endsAt"];
+    ref.snapshots().listen((event) {
+      if (!event.exists) return;
+
+      final data = event.data() as Map<String, dynamic>;
+
+      final Timestamp? endTimestamp = data["endsAt"];
+
+      if (endTimestamp == null) return;
+
       timer?.cancel();
-      timer = Timer.periodic(
-        const Duration(seconds:1),
-            (timer) async{
-          final remaining = end
-              .toDate()
-              .difference(DateTime.now())
-              .inSeconds;
-          if(!mounted)return;
-          setState(() {
-            seconds = remaining.clamp(0,60);
-          });
-          if(seconds==0){
-            timer.cancel();
-            await GameService().startVoting(
-              widget.roomId,
-              widget.round,
-            );
-          }
 
-        },
+      timer = Timer.periodic(const Duration(seconds: 1), (_) async {
+        final endTime = endTimestamp.toDate();
+        final now = DateTime.now();
 
-      );
+        final remaining = endTime.difference(now).inSeconds;
 
+        if (!mounted) return;
+
+        setState(() {
+          seconds = remaining < 0 ? 0 : remaining;
+        });
+
+        if (seconds <= 0) {
+          timer?.cancel();
+
+          await GameService().startVoting(
+            widget.roomId,
+            widget.round,
+          );
+        }
+      });
     });
-
   }
 
   @override
@@ -67,11 +82,9 @@ class _CountdownTimerState extends State<CountdownTimer> {
     return Text(
       "$seconds",
       style: const TextStyle(
-        fontSize:45,
+        fontSize: 45,
         fontWeight: FontWeight.bold,
       ),
     );
-
   }
-
 }

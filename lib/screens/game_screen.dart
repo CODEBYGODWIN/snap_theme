@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../services/game_service.dart';
 import '../widgets/countdown_timer.dart';
 import 'vote_screen.dart';
 
-class GameScreen extends StatelessWidget {
+class GameScreen extends StatefulWidget {
   final String roomId;
   final String userId;
 
@@ -15,42 +16,41 @@ class GameScreen extends StatelessWidget {
   });
 
   @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  final TextEditingController themeController = TextEditingController();
+
+  @override
+  void dispose() {
+    themeController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final roomRef =
-        FirebaseFirestore.instance.collection("rooms").doc(roomId);
+        FirebaseFirestore.instance.collection("rooms").doc(widget.roomId);
 
     return StreamBuilder<DocumentSnapshot>(
       stream: roomRef.snapshots(),
       builder: (context, roomSnapshot) {
         if (!roomSnapshot.hasData) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
           );
         }
 
-        final roomData =
+        final room =
             roomSnapshot.data!.data() as Map<String, dynamic>;
 
-        final int currentRound = roomData["currentRound"];
-        final String status = roomData["status"];
+        final currentRound = room["currentRound"];
 
-        // 🗳️ Dès que le vote démarre, tout le monde bascule sur VoteScreen
-        if (status == "voting") {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => VoteScreen(
-                  roomId: roomId,
-                  roundId: currentRound,
-                  userId: userId,
-                ),
-              ),
-            );
-          });
-        }
+        final hostId = room["hostId"];
 
-        // 🔥 On écoute directement la manche actuelle
         final roundRef = roomRef
             .collection("rounds")
             .doc(currentRound.toString());
@@ -60,46 +60,134 @@ class GameScreen extends StatelessWidget {
           builder: (context, roundSnapshot) {
             if (!roundSnapshot.hasData) {
               return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
               );
             }
 
-            final roundData =
+            final round =
                 roundSnapshot.data!.data() as Map<String, dynamic>;
 
-            final theme = roundData["theme"];
+            final String status = round["status"];
+
+            final String theme = round["theme"];
+
+            if (status == "vote") {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VoteScreen(
+                      roomId: widget.roomId,
+                      roundId: currentRound,
+                      userId: widget.userId,
+                    ),
+                  ),
+                );
+              });
+            }
 
             return Scaffold(
               appBar: AppBar(
-                title: const Text("SnapThème"),
+                title: Text("Manche $currentRound"),
               ),
               body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Thème",
-                      style: TextStyle(fontSize: 20),
-                    ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Builder(
+                    builder: (_) {
 
-                    const SizedBox(height: 20),
+                      // ===============================
+                      // CHOIX DU THEME
+                      // ===============================
+                      if (status == "theme") {
 
-                    Text(
-                      theme,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                        if (widget.userId == hostId) {
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
 
-                    const SizedBox(height: 50),
+                              const Text(
+                                "Choisissez le thème",
+                                style: TextStyle(fontSize: 24),
+                              ),
 
-                    CountdownTimer(
-                      roomId: roomId,
-                      round: currentRound,
-                    ),
-                  ],
+                              const SizedBox(height: 20),
+
+                              TextField(
+                                controller: themeController,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  hintText: "Ex : Voiture rouge",
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              ElevatedButton(
+                                onPressed: () async {
+
+                                  if (themeController.text.trim().isEmpty) {
+                                    return;
+                                  }
+
+                                  await GameService().startPhotoPhase(
+                                    roomId: widget.roomId,
+                                    round: currentRound,
+                                    theme: themeController.text.trim(),
+                                  );
+                                },
+                                child: const Text("Valider"),
+                              ),
+                            ],
+                          );
+                        }
+
+                        return const Text(
+                          "Le maître du jeu choisit un thème...",
+                          style: TextStyle(fontSize: 22),
+                        );
+                      }
+
+                      // ===============================
+                      // PHASE PHOTO
+                      // ===============================
+                      if (status == "photo") {
+
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+
+                            const Text(
+                              "Thème",
+                              style: TextStyle(fontSize: 22),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            Text(
+                              theme,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            const SizedBox(height: 50),
+
+                            CountdownTimer(
+                              roomId: widget.roomId,
+                              round: currentRound,
+                            ),
+                          ],
+                        );
+                      }
+
+                      return const CircularProgressIndicator();
+                    },
+                  ),
                 ),
               ),
             );
