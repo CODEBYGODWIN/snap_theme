@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>SnapThème utilise la caméra pour prendre la photo du thème de la manche.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SnapThème peut utiliser votre galerie comme alternative si la caméra est indisponible.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
