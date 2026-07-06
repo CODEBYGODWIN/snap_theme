@@ -35,7 +35,7 @@ class GameService {
         .doc(round.toString());
 
     final endsAt = Timestamp.fromDate(
-      DateTime.now().add(const Duration(seconds: 60)),
+      DateTime.now().add(const Duration(seconds: 90)),
     );
 
     await roundRef.update({
