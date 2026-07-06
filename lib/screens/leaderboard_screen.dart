@@ -36,7 +36,6 @@ class LeaderboardScreen extends StatelessWidget {
         final currentRound = roomData["currentRound"] as int;
         final maxRound = roomData["maxRound"] as int;
 
-        // Manche suivante démarrée, ou retour au lobby : tout le monde bascule.
         if (status == "theme") {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pushReplacement(
@@ -61,8 +60,9 @@ class LeaderboardScreen extends StatelessWidget {
           });
         }
 
-        final roundRef =
-            roomRef.collection("rounds").doc(currentRound.toString());
+        final roundRef = roomRef
+            .collection("rounds")
+            .doc(currentRound.toString());
 
         return StreamBuilder<DocumentSnapshot>(
           stream: roundRef.snapshots(),
@@ -118,18 +118,15 @@ class LeaderboardScreen extends StatelessWidget {
                               if (status == "finished") {
                                 await RoomService().resetToLobby(roomId);
                               } else {
-                                await GameService().startNextRound(
-                                  roomId,
-                                  winnerId: winnerId,
-                                );
+                                await GameService().startNextRound(roomId);
                               }
                             },
                             child: Text(
                               status == "finished"
                                   ? "Retour au lobby"
                                   : currentRound < maxRound
-                                      ? "Manche suivante"
-                                      : "Voir le classement final",
+                                  ? "Manche suivante"
+                                  : "Voir le classement final",
                             ),
                           ),
                         ),

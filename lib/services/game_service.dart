@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'score_service.dart';
@@ -7,10 +5,7 @@ import 'score_service.dart';
 class GameService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Démarre la manche suivante : le gagnant de la manche précédente choisit
-  /// le thème (un joueur aléatoire pour la toute première manche). Si le
-  /// nombre max de manches est dépassé, la partie passe en "finished".
-  Future<void> startNextRound(String roomId, {String? winnerId}) async {
+  Future<void> startNextRound(String roomId) async {
     final roomRef = _db.collection("rooms").doc(roomId);
     final room = await roomRef.get();
 
@@ -23,29 +18,18 @@ class GameService {
       return;
     }
 
-    String chooserId;
-    if (winnerId != null) {
-      chooserId = winnerId;
-    } else {
-      final players = await roomRef.collection("players").get();
-      final eligible =
-          players.docs.where((p) => !(p["isSpectator"] ?? false)).toList();
-      final pool = eligible.isNotEmpty ? eligible : players.docs;
-      chooserId = pool[Random().nextInt(pool.length)].id;
-    }
+    final hostId = room["hostId"] as String;
 
     await roomRef.collection("rounds").doc(nextRound.toString()).set({
       "theme": "",
       "status": "theme",
-      "chooserId": chooserId,
+      "chooserId": hostId,
       "endsAt": Timestamp.now(),
     });
 
     await roomRef.update({"status": "theme", "currentRound": nextRound});
   }
 
-  /// Le joueur désigné valide le thème : la manche passe en phase photo
-  /// avec un timer de 60s synchronisé côté serveur (endsAt).
   Future<void> chooseTheme({
     required String roomId,
     required int round,
@@ -74,8 +58,6 @@ class GameService {
     });
   }
 
-  /// Clôture le vote, calcule le gagnant et passe la manche en leaderboard.
-  /// Idempotent : un vote déjà clôturé n'est pas recompté.
   Future<void> endVoting(String roomId, int round) async {
     final roundRef = _db
         .collection("rooms")
@@ -92,8 +74,6 @@ class GameService {
     );
 
     await roundRef.update({"status": "leaderboard", "winnerId": winnerId});
-    await _db.collection("rooms").doc(roomId).update({
-      "status": "leaderboard",
-    });
+    await _db.collection("rooms").doc(roomId).update({"status": "leaderboard"});
   }
 }

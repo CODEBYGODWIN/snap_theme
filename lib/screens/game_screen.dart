@@ -12,16 +12,11 @@ class GameScreen extends StatelessWidget {
   final String roomId;
   final String userId;
 
-  const GameScreen({
-    super.key,
-    required this.roomId,
-    required this.userId,
-  });
+  const GameScreen({super.key, required this.roomId, required this.userId});
 
   @override
   Widget build(BuildContext context) {
-    final roomRef =
-        FirebaseFirestore.instance.collection("rooms").doc(roomId);
+    final roomRef = FirebaseFirestore.instance.collection("rooms").doc(roomId);
 
     return StreamBuilder<DocumentSnapshot>(
       stream: roomRef.snapshots(),
@@ -32,13 +27,11 @@ class GameScreen extends StatelessWidget {
           );
         }
 
-        final roomData =
-            roomSnapshot.data!.data() as Map<String, dynamic>;
+        final roomData = roomSnapshot.data!.data() as Map<String, dynamic>;
 
         final int currentRound = roomData["currentRound"];
         final String status = roomData["status"];
 
-        // Dès que le vote ou le classement démarre, tout le monde bascule.
         if (status == "vote") {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pushReplacement(
@@ -57,10 +50,8 @@ class GameScreen extends StatelessWidget {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => LeaderboardScreen(
-                  roomId: roomId,
-                  userId: userId,
-                ),
+                builder: (_) =>
+                    LeaderboardScreen(roomId: roomId, userId: userId),
               ),
             );
           });
@@ -106,8 +97,6 @@ class GameScreen extends StatelessWidget {
   }
 }
 
-/// Le joueur désigné (gagnant de la manche précédente, ou tirage au sort
-/// pour la toute première manche) saisit le thème de la manche.
 class _ThemePicker extends StatefulWidget {
   final String roomId;
   final String userId;
@@ -211,8 +200,6 @@ class _ThemePickerState extends State<_ThemePicker> {
   }
 }
 
-/// Phase de capture : le thème est affiché avec le timer 60s, chaque joueur
-/// (non spectateur) peut prendre sa photo tant qu'il n'a pas déjà soumis.
 class _PhotoPhase extends StatelessWidget {
   final String roomId;
   final String userId;
@@ -228,8 +215,7 @@ class _PhotoPhase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roomRef =
-        FirebaseFirestore.instance.collection("rooms").doc(roomId);
+    final roomRef = FirebaseFirestore.instance.collection("rooms").doc(roomId);
     final playerRef = roomRef.collection("players").doc(userId);
     final submissionRef = roomRef
         .collection("rounds")
