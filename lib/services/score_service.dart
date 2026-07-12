@@ -22,29 +22,30 @@ class ScoreService {
       count[votedFor] = (count[votedFor] ?? 0) + 1;
     }
 
-    // trouver le max
-    String? winner;
-    int maxVotes = 0;
+    if (count.isEmpty) return null;
 
-    count.forEach((player, votes) {
-      if (votes > maxVotes) {
-        maxVotes = votes;
-        winner = player;
-      }
-    });
-
-    if (winner == null) return null;
-
-    final playerRef = _db
+    // Chaque joueur marque autant de points que de votes reçus.
+    final playersRef = _db
         .collection("rooms")
         .doc(roomId)
-        .collection("players")
-        .doc(winner);
+        .collection("players");
 
-    await playerRef.update({
-      "score": FieldValue.increment(1),
+    final batch = _db.batch();
+    count.forEach((playerId, votesReceived) {
+      batch.update(playersRef.doc(playerId), {
+        "score": FieldValue.increment(votesReceived),
+      });
     });
+    await batch.commit();
 
-    return winner;
+    // "Gagnant" de la manche = le(s) plus voté(s) — sert uniquement à
+    // l'affichage (photo mise en avant), pas au calcul des points.
+    final maxVotes = count.values.reduce((a, b) => a > b ? a : b);
+    final topPlayers = count.entries
+        .where((e) => e.value == maxVotes)
+        .map((e) => e.key)
+        .toList();
+
+    return topPlayers.length == 1 ? topPlayers.first : null;
   }
 }

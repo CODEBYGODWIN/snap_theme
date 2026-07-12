@@ -3,16 +3,16 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../services/game_service.dart';
-
 class CountdownTimer extends StatefulWidget {
   final String roomId;
   final int round;
+  final Future<void> Function() onExpired;
 
   const CountdownTimer({
     super.key,
     required this.roomId,
     required this.round,
+    required this.onExpired,
   });
 
   @override
@@ -21,7 +21,7 @@ class CountdownTimer extends StatefulWidget {
 
 class _CountdownTimerState extends State<CountdownTimer> {
   Timer? timer;
-  int seconds = 0;
+  int? seconds;
 
   @override
   void initState() {
@@ -39,33 +39,34 @@ class _CountdownTimerState extends State<CountdownTimer> {
     ref.snapshots().listen((event) {
       if (!event.exists) return;
 
-      final data = event.data() as Map<String, dynamic>;
-
-      final Timestamp? endTimestamp = data["endsAt"];
+      final data = event.data();
+      final Timestamp? endTimestamp = data?["endsAt"];
 
       if (endTimestamp == null) return;
 
       timer?.cancel();
-
-      timer = Timer.periodic(const Duration(seconds: 1), (_) async {
-        final endTime = endTimestamp.toDate();
-        final now = DateTime.now();
-
-        final remaining = endTime.difference(now).inSeconds;
-
-        if (!mounted) return;
-
-        setState(() {
-          seconds = remaining < 0 ? 0 : remaining;
-        });
-
-        if (seconds <= 0) {
-          timer?.cancel();
-
-          await GameService().startVoting(widget.roomId, widget.round);
-        }
-      });
+      _tick(endTimestamp);
+      timer = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => _tick(endTimestamp),
+      );
     });
+  }
+
+  void _tick(Timestamp endTimestamp) {
+    final remaining =
+        endTimestamp.toDate().difference(DateTime.now()).inSeconds;
+
+    if (!mounted) return;
+
+    setState(() {
+      seconds = remaining.clamp(0, 60);
+    });
+
+    if (remaining <= 0) {
+      timer?.cancel();
+      unawaited(widget.onExpired());
+    }
   }
 
   @override
@@ -76,6 +77,14 @@ class _CountdownTimerState extends State<CountdownTimer> {
 
   @override
   Widget build(BuildContext context) {
+    if (seconds == null) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
     return Text(
       "$seconds",
       style: const TextStyle(

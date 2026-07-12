@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../services/game_service.dart';
 import '../services/vote_service.dart';
+import '../widgets/countdown_timer.dart';
 import 'leaderboard_screen.dart';
 
 class VoteScreen extends StatelessWidget {
@@ -20,10 +21,10 @@ class VoteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roomRef = FirebaseFirestore.instance.collection("rooms").doc(roomId);
-    final roundRef =
-        roomRef.collection("rounds").doc(roundId.toString());
+    final roundRef = roomRef.collection("rounds").doc(roundId.toString());
     final submissionsRef = roundRef.collection("submissions");
     final votesRef = roomRef.collection("votes");
+    final myVoteRef = votesRef.doc("${roundId}_$userId");
 
     return StreamBuilder<DocumentSnapshot>(
       stream: roomRef.snapshots(),
@@ -48,6 +49,14 @@ class VoteScreen extends StatelessWidget {
           appBar: AppBar(title: const Text("Vote")),
           body: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: CountdownTimer(
+                  roomId: roomId,
+                  round: roundId,
+                  onExpired: () => GameService().endVoting(roomId, roundId),
+                ),
+              ),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: submissionsRef.snapshots(),
@@ -64,43 +73,69 @@ class VoteScreen extends StatelessWidget {
                       );
                     }
 
-                    return GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                      ),
-                      itemCount: photos.length,
-                      itemBuilder: (context, index) {
-                        final photo = photos[index];
-                        final playerId = photo.id;
-                        final photoUrl = photo["photoUrl"];
-                        final isSelf = playerId == userId;
+                    return StreamBuilder<DocumentSnapshot>(
+                      stream: myVoteRef.snapshots(),
+                      builder: (context, myVoteSnapshot) {
+                        final votedForId = myVoteSnapshot.data?.exists == true
+                            ? myVoteSnapshot.data!.get("votedForPlayerId")
+                                  as String?
+                            : null;
 
-                        return GestureDetector(
-                          onTap: isSelf
-                              ? null
-                              : () async {
-                                  await VoteService().vote(
-                                    roomId: roomId,
-                                    roundId: roundId,
-                                    voterId: userId,
-                                    votedForId: playerId,
-                                  );
-                                },
-                          child: Card(
-                            color: isSelf ? Colors.grey : Colors.white,
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: Image.network(
-                                    photoUrl,
-                                    fit: BoxFit.cover,
+                        return GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                              ),
+                          itemCount: photos.length,
+                          itemBuilder: (context, index) {
+                            final photo = photos[index];
+                            final playerId = photo.id;
+                            final photoUrl = photo["photoUrl"];
+                            final isSelf = playerId == userId;
+                            final isVoted = playerId == votedForId;
+
+                            return GestureDetector(
+                              onTap: isSelf
+                                  ? null
+                                  : () async {
+                                      await VoteService().vote(
+                                        roomId: roomId,
+                                        roundId: roundId,
+                                        voterId: userId,
+                                        votedForId: playerId,
+                                      );
+                                    },
+                              child: Card(
+                                color: isSelf ? Colors.grey : Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  side: BorderSide(
+                                    color: isVoted
+                                        ? Colors.green
+                                        : Colors.transparent,
+                                    width: 4,
                                   ),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
-                                Text(isSelf ? "Toi" : "Voter"),
-                              ],
-                            ),
-                          ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: Image.network(
+                                        photoUrl,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Text(
+                                      isSelf
+                                          ? "Toi"
+                                          : isVoted
+                                          ? "✅ Ton vote"
+                                          : "Voter",
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
                     );
@@ -124,19 +159,14 @@ class VoteScreen extends StatelessWidget {
                             .snapshots(),
                         builder: (context, voteSnapshot) {
                           final votes = voteSnapshot.data?.docs.length ?? 0;
+                          final allVoted = eligible > 0 && votes >= eligible;
 
-                          // Tout le monde a voté : on clôture automatiquement.
-                          if (eligible > 0 && votes >= eligible) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              GameService().endVoting(roomId, roundId);
-                            });
-                          }
-
-                          return FilledButton(
-                            onPressed: () async {
-                              await GameService().endVoting(roomId, roundId);
-                            },
-                            child: Text("Clôturer le vote ($votes/$eligible)"),
+                          return _CloseVoteButton(
+                            roomId: roomId,
+                            roundId: roundId,
+                            votes: votes,
+                            eligible: eligible,
+                            autoClose: allVoted,
                           );
                         },
                       );
@@ -147,6 +177,63 @@ class VoteScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _CloseVoteButton extends StatefulWidget {
+  final String roomId;
+  final int roundId;
+  final int votes;
+  final int eligible;
+  final bool autoClose;
+
+  const _CloseVoteButton({
+    required this.roomId,
+    required this.roundId,
+    required this.votes,
+    required this.eligible,
+    required this.autoClose,
+  });
+
+  @override
+  State<_CloseVoteButton> createState() => _CloseVoteButtonState();
+}
+
+class _CloseVoteButtonState extends State<_CloseVoteButton> {
+  bool _closing = false;
+
+  @override
+  void didUpdateWidget(covariant _CloseVoteButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autoClose && !_closing) {
+      _close();
+    }
+  }
+
+  Future<void> _close() async {
+    if (_closing) return;
+    setState(() => _closing = true);
+    await GameService().endVoting(widget.roomId, widget.roundId);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoClose) _close();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: _closing ? null : _close,
+      child: _closing
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Text("Clôturer le vote (${widget.votes}/${widget.eligible})"),
     );
   }
 }

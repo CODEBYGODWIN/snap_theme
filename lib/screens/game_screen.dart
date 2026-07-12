@@ -235,7 +235,11 @@ class _PhotoPhase extends StatelessWidget {
             style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 30),
-          CountdownTimer(roomId: roomId, round: round),
+          CountdownTimer(
+            roomId: roomId,
+            round: round,
+            onExpired: () => GameService().startVoting(roomId, round),
+          ),
           const SizedBox(height: 30),
           StreamBuilder<DocumentSnapshot>(
             stream: playerRef.snapshots(),

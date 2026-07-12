@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(roomId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.auth.uid));
+    }
+
+    // Lecture de la room seulement pour les membres authentifiés.
+    match /rooms/{roomId} {
+      allow read: if isMember(roomId);
+
+      // Création de la room uniquement par l’hôte authentifié.
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.hostId;
+
+      // Mise à jour ouverte aux membres pour les transitions de manche.
+      allow update: if isMember(roomId);
+
+      // Suppression désactivée par défaut.
+      allow delete: if false;
+
+      match /players/{playerId} {
+        allow read: if isMember(roomId);
+
+        // Un joueur peut créer ou modifier son propre profil dans la room.
+        // L’hôte peut aussi modifier les profils des participants.
+        allow create, update: if isMember(roomId) && (
+          request.auth.uid == playerId ||
+          request.auth.uid == get(/databases/$(database)/documents/rooms/$(roomId)).data.hostId
+        );
+        allow delete: if false;
+      }
+
+      match /rounds/{roundId} {
+        allow read: if isMember(roomId);
+        allow create, update: if isMember(roomId);
+        allow delete: if false;
+
+        match /submissions/{playerId} {
+          allow read: if isMember(roomId);
+
+          // taille max de 5 MO pour les photos
+          allow create, update: if isMember(roomId)
+            && request.auth.uid == playerId
+            && request.resource.data.keys().hasOnly(['photoUrl', 'submittedAt'])
+            && request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() < 2048;
+          allow delete: if false;
+        }
+      }
+
+      match /votes/{voteId} {
+        allow read: if isMember(roomId);
+
+        // Les votes sont ouverts aux joueurs encore dans la room.
+        // Le client reste responsable de la logique métier de non-répétition d’un vote.
+        allow create, update: if isMember(roomId);
+        allow delete: if false;
+      }
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+  }
+}
