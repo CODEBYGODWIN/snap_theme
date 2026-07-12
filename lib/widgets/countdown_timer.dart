@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class CountdownTimer extends StatefulWidget {
+
   final String roomId;
   final int round;
   final Future<void> Function() onExpired;
@@ -14,7 +15,6 @@ class CountdownTimer extends StatefulWidget {
     required this.round,
     required this.onExpired,
   });
-
   @override
   State<CountdownTimer> createState() => _CountdownTimerState();
 }
@@ -26,46 +26,36 @@ class _CountdownTimerState extends State<CountdownTimer> {
   @override
   void initState() {
     super.initState();
-    _listenToEndsAt();
+    startListening();
   }
 
-  void _listenToEndsAt() {
-    final ref = FirebaseFirestore.instance
-        .collection("rooms")
-        .doc(widget.roomId)
-        .collection("rounds")
-        .doc(widget.round.toString());
+  void startListening(){
 
-    ref.snapshots().listen((event) {
-      if (!event.exists) return;
-
-      final data = event.data();
-      final Timestamp? endTimestamp = data?["endsAt"];
-
-      if (endTimestamp == null) return;
-
+    FirebaseFirestore.instance.collection("rooms").doc(widget.roomId).collection("rounds").doc(widget.round.toString()).snapshots().listen((event){
+      final Timestamp end = event["endsAt"];
       timer?.cancel();
-      _tick(endTimestamp);
+      _tick(end);
       timer = Timer.periodic(
-        const Duration(seconds: 1),
-        (_) => _tick(endTimestamp),
+        const Duration(seconds:1),
+            (timer) => _tick(end),
       );
+
     });
+
   }
 
-  void _tick(Timestamp endTimestamp) {
-    final remaining =
-        endTimestamp.toDate().difference(DateTime.now()).inSeconds;
-
-    if (!mounted) return;
-
+  void _tick(Timestamp end) async {
+    final remaining = end
+        .toDate()
+        .difference(DateTime.now())
+        .inSeconds;
+    if(!mounted)return;
     setState(() {
-      seconds = remaining.clamp(0, 60);
+      seconds = remaining.clamp(0,60);
     });
-
-    if (remaining <= 0) {
+    if(seconds==0){
       timer?.cancel();
-      unawaited(widget.onExpired());
+      await widget.onExpired();
     }
   }
 
@@ -88,9 +78,11 @@ class _CountdownTimerState extends State<CountdownTimer> {
     return Text(
       "$seconds",
       style: const TextStyle(
-        fontSize: 45,
+        fontSize:45,
         fontWeight: FontWeight.bold,
       ),
     );
+
   }
+
 }

@@ -28,7 +28,7 @@ class GameService {
           .collection("rounds")
           .doc(currentRound.toString());
       final previousRoundSnap = await previousRoundRef.get();
-      final winnerId = previousRoundSnap.data()?['winnerId'] as String?;
+      final winnerId = previousRoundSnap.data()?["winnerId"] as String?;
       chooserId = winnerId ?? hostId;
     }
 
@@ -41,6 +41,7 @@ class GameService {
 
     await roomRef.update({"status": "theme", "currentRound": nextRound});
   }
+
   Future<void> chooseTheme({
     required String roomId,
     required int round,
