@@ -73,13 +73,80 @@ firebase deploy --only firestore:rules
 
 ## Captures du jeu
 
+- Création compte 
 
-- [ ] Lobby : création de room, partage du code et arrivée de 2 joueurs
-- [ ] Capture : prise de photo depuis la caméra
-- [ ] Galerie : sélection d’une image depuis la galerie
-- [ ] Vote : affichage de la grille de photos et sélection d’un vote
-- [ ] Classement : écran de résultat avec score et gagnant de la manche
-- [ ] Permission refusée : refus caméra, passage en galerie ou spectateur
+![](./images-game/creation-compte.png)
+
+- login / joué en temps qu'invité
+
+![](./images-game/login-guest.png)
+
+- home joueur 1 et 2
+
+![](./images-game/home.png)
+
+![](./images-game/joueur2.png)
+
+- création de room
+
+![](./images-game/creation-room.png)
+
+![](./images-game/lobby.png)
+
+- joueur 2 rejoint la room
+
+![](./images-game/rejoindre-room.png)
+
+![](./images-game/player2-join-lobby.png)
+
+- Début partie
+
+Choix du thème par le chef de la room
+
+![](./images-game/theme-cote-createur.png)
+
+![](./images-game/theme-cote-user-simple.png)
+
+- Lancement du chrono et choix d'une image + authorisation
+
+![](./images-game/start-chrono.png)
+
+![](./images-game/authorisation-photo.png)
+
+- Photo envoyé
+
+![](./images-game/confirm-photo.png)
+
+![](./images-game/photo-send.png)
+
+- Vote : affichage de la grille de photos et sélection d’un vote
+
+![](./images-game/vote.png)
+
+- Classement Manche 1
+
+![](./images-game/classement1.png)
+
+- Thème 2 (Début manche 2)
+
+![](./images-game/theme2.png)
+
+- Photo upload
+
+![](./images-game/photo-send2.png)
+
+- Vote manche 2
+
+![](./images-game/vote2.png)
+
+- Classement Manche 2
+
+![](./images-game/classement2.png)
+
+- Classement final
+
+![](./images-game/winner.png)
+
 
 
 ## Schéma Firestore
